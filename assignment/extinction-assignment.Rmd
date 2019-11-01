@@ -1,6 +1,6 @@
 ---
 title: "Extinctions Unit"
-author: "Your name, partner name"
+author: "Alice Hua, Chancey Quam"
 maketitle: true
 output: github_document
 ---
@@ -11,6 +11,7 @@ output: github_document
 library("tidyverse")
 library("httr")
 library("jsonlite")
+library("tidyverse")
 #library("printr")
 knitr::opts_chunk$set(comment=NA)
 ```
@@ -50,4 +51,75 @@ Our focal task will be to reproduce the result from Ceballos and colleagues show
 
 
 
+```{r}
+token = "9bb4facb6d23f48efbf424bb05c0c1ef1cf6f468393bc745d42179ac4aca5fee"
+```
+
+```{r}
+rest <- httr::GET("https://apiv3.iucnredlist.org/api/v3/version")
+rest
+x <- content(rest)
+class(x)
+
+```
+
+```{r}
+countries <- httr::GET("https://apiv3.iucnredlist.org/api/v3/country/list?token=9bb4facb6d23f48efbf424bb05c0c1ef1cf6f468393bc745d42179ac4aca5fee")
+countries
+y <- content(countries)
+```
+
+```{r}
+species <- httr::GET("https://apiv3.iucnredlist.org/api/v3/species/page/0?token=9bb4facb6d23f48efbf424bb05c0c1ef1cf6f468393bc745d42179ac4aca5fee")
+page0 <- content(species)|
+```
+
+Reading in data
+```{r}
+species_ap <- "https://apiv3.iucnredlist.org/api/v3/species"
+page <- "/page/"
+page_number <- 0:10
+query <- "?token="
+token <- "9bb4facb6d23f48efbf424bb05c0c1ef1cf6f468393bc745d42179ac4aca5fee"
+
+#clue everything together to make a url that iterates over the vector of page_number
+all_pages <- paste0(species_ap, page, page_number, query, token)
+
+
+#apply map to all_pages a vector
+all_results <- map(all_pages, GET)
+```
+
+Turning data into "rectangel"  as data.frame and find species categorized under extinction
+```{r}
+row_to_tibble <- function(row){
+  tibble(scientific_name = row$scientific_name, category = row$category)
+}
+
+get_result <- function(x){
+  x %>% content() %>% getElement("result") %>% 
+  map_dfr(row_to_tibble)
+}
+
+df <- all_results  %>% map_dfr(get_result)
+df
+```
+
+Lets get the narrative text for each species listed as extinct
+```{r}
+all_extinct <- df %>% filter(category=="EX") %>% pull(scientific_name)
+
+base <- "https://apiv3.iucnredlist.org"
+narrative <- "/api/v3/species/narrative/"
+name <- all_extinct
+query <- "?token="
+token <- "9bb4facb6d23f48efbf424bb05c0c1ef1cf6f468393bc745d42179ac4aca5fee"
+
+species_narrative_url <- paste0(base, narrative, name, query, token)
+dummy <- map(species_narrative_url, GET)
+```
+
+```{r}
+class(all_extinct)
+```
 

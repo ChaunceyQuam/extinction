@@ -5,18 +5,15 @@ maketitle: true
 output: github_document
 ---
 
-
-
 ```{r include=FALSE}
 library("tidyverse")
 library("httr")
 library("jsonlite")
 library("tidyverse")
+library("stringr")
 #library("printr")
 knitr::opts_chunk$set(comment=NA)
 ```
-
-
 
 ## Extinctions Module
 
@@ -49,12 +46,7 @@ Our focal task will be to reproduce the result from Ceballos and colleagues show
 - [Pimm et al (2014)](http://doi.org/10.1126/science.1246752)
 - [Sandom et al (2014)](http://dx.doi.org/10.1098/rspb.2013.3254)
 
-```{r}
-species <- httr::GET("https://apiv3.iucnredlist.org/api/v3/species/page/0?token=9bb4facb6d23f48efbf424bb05c0c1ef1cf6f468393bc745d42179ac4aca5fee")
-page0 <- content(species)
-```
-
-Reading in data
+Reading in data from the IUCN Red List site RESTful API
 ```{r}
 species_ap <- "https://apiv3.iucnredlist.org/api/v3/species"
 page <- "/page/"
@@ -70,12 +62,13 @@ all_pages <- paste0(species_ap, page, page_number, query, token)
 all_results <- map(all_pages, GET)
 ```
 
+Let's look at the names of the data.
 ```{r}
 row <- all_results[[1]] %>% content() %>% getElement("result") %>% getElement(1)
 names(row)
 ```
 
-Turning data into "rectangle"  as data.frame and find species categorized under extinction
+Turning data into "rectangle" as a dataframe and find species categorized under extinction.
 ```{r}
 row_to_tibble <- function(row){
   tibble(scientific_name = row$scientific_name, 
@@ -88,53 +81,19 @@ get_result <- function(x){
   map_dfr(row_to_tibble)
 }
 
-all_species <- all_results  %>% map_dfr(get_result)
+all_species <- all_results  %>% map_dfr(get_result) %>% filter(category=="EX")
 all_species
 ```
 
-Let's see the unique classes of species
+We can see that 910 species went extinct. Let's see the unique classes of species.
 ```{r}
 unique(all_species$class)
 ```
 
-
-Lets get the narrative text for each species listed as extinct
+Lets get the narrative text for each species listed as extinct. Here we are setting up the url to be called in the RESTful API.
 ```{r}
 #setting the species table individually
-all_extinct_mammal_bird <- all_species %>% filter(category=="EX") %>% filter(class == "AVES") %>% pull(scientific_name)
-
-#variables of a url
-base <- "https://apiv3.iucnredlist.org"
-narrative <- "/api/v3/species/narrative/"
-name_group1 <- all_extinct_mammal_bird
-query <- "?token="
-token <- "9bb4facb6d23f48efbf424bb05c0c1ef1cf6f468393bc745d42179ac4aca5fee"
-url <- paste0(base, narrative, name_group1, query, token)
-
-sleep_func <- function(url){
-  Sys.sleep(0.1)
-  GET(url)
-}
-
-row_to_tibble_1 <- function(row){
-  tibble(extinction_year = row$rationale)
-}
-
-get_result <- function(x){
-  x %>% content() %>% getElement("result") %>%
-    map_dfr(row_to_tibble_1)
-}
-
-
-num_bird <- nrow(all_extinct_mammal_bird <- all_species %>% filter(category=="EX") %>% filter(class == "AVES"))
-num_mammal <- nrow(all_extinct_mammal_bird <- all_species %>% filter(category=="EX") %>% filter(class == "MAMMALIA"))
-num_vert <- nrow(all_extinct_mammal_bird <- all_species %>% filter(category=="EX"))
-other_vert <- num_vert -(num_bird + num_mammal)
-
-```
-
-```{r}
-all_extinct <- all_species %>% filter(category=="EX") %>% filter(class == "AVES") %>% pull(scientific_name)
+all_extinct <- all_species %>% pull(scientific_name)
 
 #variables of a url
 base <- "https://apiv3.iucnredlist.org"
@@ -143,43 +102,69 @@ name_group1 <- all_extinct
 query <- "?token="
 token <- "9bb4facb6d23f48efbf424bb05c0c1ef1cf6f468393bc745d42179ac4aca5fee"
 url <- paste0(base, narrative, name_group1, query, token)
+```
 
-resp <- map(url[1:10], sleep_func)
+I have already called the urls for all the extinct species (this will take awhile) and saved it as an R object RDS. The code chunk below will load the object if the file exists or it will download the data if the file doesn't exist. Then this object consists of all extinct species is read into all_data.
+```{r}
+if (!file.exists("massive_resp.rds")){
+  resp <- map(url, GET)
+  saveRDS(resp, "massive_resp.rds")
+} else {
+  all_data <- readRDS("massive_resp.rds")
+}
+```
+
+We will need to get the rationale section for each species in order to find out what date they went extinct. 
+Here are the narratives of the species, the ones that are NULL are stored as NA.
+```{r}
 map_chr_na <- possibly(map_chr, as.character(NA))
 
-json <- resp %>% map(content) %>% map("result") %>% 
+narrative <- all_data %>% map(content) %>% map("result") %>% 
   map(map_chr_na, "rationale")
-
-json
 ```
 
-
-
+This is an example of how one species can have more than 1 string paragraph of narrative. This will need to deal with later.
 ```{r}
-content(GET(url[1])) %>% getElement("result") %>% map_dfr(row_to_tibble_1)
-
+(map_int(narrative, length) >1) %>% which()
+narrative[606]
 ```
 
-Let's get the narrative for the birds and mammals
+Lets extract the extinction date for species that have dates in their narrative. We created a custom function to extract any 4 digit number from the rationales. We then unlist them as they are nested in lists as we have seen above.
 ```{r}
-narrative_group1 <- map(url[1:10], sleep_func)
-is_error <- narrative_group1 %>% map_lgl(http_error)
-good_narrative <- narrative_group1[!is_error]
-extinct_table <- good_narrative %>% map_dfr(possibly(get_result, NA))
-
+extinc_year <- map(narrative, function(x){
+  str_extract_all(x, "\\d{4}") %>% 
+  unlist()
+}) 
 ```
+
+Here is the function that will bin the years for all species into the specific bins for our final graph. Since we are using bins of interval 100 years. It is reasonable to put them in these bins. For rationales of species that contain more than one year, we will collapse them if they're in the same bin. If they are Null values, we will give them NA as values. 
 ```{r}
-
+bin_year <- function(x) {
+  x = as.integer(x)
+    case_when(
+      between(x, 1500, 1600) ~ "1600",
+      between(x, 1600, 1700) ~ "1700",
+      between(x, 1700, 1800) ~ "1800",
+      between(x, 1800, 1900) ~ "1900",
+      between(x, 1900, 2000) ~ "2000",
+      !between(x, 1500, 2000) ~ as.character("not a year"),
+      length(x) < 1 ~ as.character(NA)) %>%
+      unique()
+    }
 ```
 
-Lets' look at the date that they go extinct
+Here we apply our binning function to all the years that we extracted from the rationale. We will take a look an 10 of them as an example of how the years in each rationale is now a single number unless there is something funky. To be continue next week...
 ```{r}
-stringr::str_extract_all(json, pattern = "\\d\\d\\d\\d")
-
-
+all_year <- 
+  map(extinc_year, bin_year)
+all_year[100:110]
 ```
+
+Here we are interested in counting how many species per class went extinct. This will be useful to calculate the fractions later for our final graph. 
+Again we know 910 species went extinct in total. 
 ```{r}
-text %>% 
-stringr::str_extract_all("\\d\\d\\d\\d")
+num_species <- all_species %>% count(class, sort= TRUE)
+num_species
 ```
+
 

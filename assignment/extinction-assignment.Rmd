@@ -92,11 +92,16 @@ all_species <- all_results  %>% map_dfr(get_result)
 all_species
 ```
 
+Let's see the unique classes of species
+```{r}
+unique(all_species$class)
+```
+
+
 Lets get the narrative text for each species listed as extinct
 ```{r}
 #setting the species table individually
-all_extinct_mammal_bird <- all_species %>% filter(category=="EX") %>% filter(class=="MAMMALIA") %>% filter(class=="AVES") %>% pull(scientific_name)
-
+all_extinct_mammal_bird <- all_species %>% filter(category=="EX") %>% filter(class == "AVES") %>% pull(scientific_name)
 
 #variables of a url
 base <- "https://apiv3.iucnredlist.org"
@@ -117,8 +122,41 @@ row_to_tibble_1 <- function(row){
 
 get_result <- function(x){
   x %>% content() %>% getElement("result") %>%
-    map_dfr(safely(row_to_tibble_1, NA))
+    map_dfr(row_to_tibble_1)
 }
+
+
+num_bird <- nrow(all_extinct_mammal_bird <- all_species %>% filter(category=="EX") %>% filter(class == "AVES"))
+num_mammal <- nrow(all_extinct_mammal_bird <- all_species %>% filter(category=="EX") %>% filter(class == "MAMMALIA"))
+num_vert <- nrow(all_extinct_mammal_bird <- all_species %>% filter(category=="EX"))
+other_vert <- num_vert -(num_bird + num_mammal)
+
+```
+
+```{r}
+all_extinct <- all_species %>% filter(category=="EX") %>% filter(class == "AVES") %>% pull(scientific_name)
+
+#variables of a url
+base <- "https://apiv3.iucnredlist.org"
+narrative <- "/api/v3/species/narrative/"
+name_group1 <- all_extinct
+query <- "?token="
+token <- "9bb4facb6d23f48efbf424bb05c0c1ef1cf6f468393bc745d42179ac4aca5fee"
+url <- paste0(base, narrative, name_group1, query, token)
+
+resp <- map(url[1:10], sleep_func)
+map_chr_na <- possibly(map_chr, as.character(NA))
+
+json <- resp %>% map(content) %>% map("result") %>% 
+  map(map_chr_na, "rationale")
+
+json
+```
+
+
+
+```{r}
+content(GET(url[1])) %>% getElement("result") %>% map_dfr(row_to_tibble_1)
 
 ```
 
@@ -127,8 +165,7 @@ Let's get the narrative for the birds and mammals
 narrative_group1 <- map(url[1:10], sleep_func)
 is_error <- narrative_group1 %>% map_lgl(http_error)
 good_narrative <- narrative_group1[!is_error]
-good_narrative %>% map_dfr(get_result)
-
+extinct_table <- good_narrative %>% map_dfr(possibly(get_result, NA))
 
 ```
 ```{r}
@@ -137,27 +174,9 @@ good_narrative %>% map_dfr(get_result)
 
 Lets' look at the date that they go extinct
 ```{r}
-  result <-content(responses)
-  text <- result$result[[1]]$rationale %>%
-    stringr::str_extract_all("\\d\\d\\d\\d")
-}
+stringr::str_extract_all(json, pattern = "\\d\\d\\d\\d")
 
-request_API_narrative ()
 
-```
-```{r}
-paste0(base, narrative, name, query, token)
-```
-
-#writing a function to get narrative 
-```{r}
-
-```
-
-```{r}
-result <- content(dummy)
-text <- result$result[[1]]$rationale
-text
 ```
 ```{r}
 text %>% 

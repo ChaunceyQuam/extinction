@@ -166,13 +166,13 @@ Again we know 910 species went extinct in total.
 ```{r}
 num_species <- all_species %>% count(class, sort= TRUE)
 num_species
-all_species
 ```
 
 The background rate used by Gerardo Ceballos is 2 mammal extinctions per 10,000 species per 100 years (2E/MSY). The modern extinction rate is 100 times higher than this background rate. 
 
 We can compare the rates of extinction between using "EX" = "extinction" category and "EW" = "extinction in the wild" and "PE" = "possibly extinct"
 
+We need to create a table that has year the species went extinct with the species name to plot on a graph.
 ```{r}
 ```
 

@@ -11,6 +11,7 @@ library("httr")
 library("jsonlite")
 library("tidyverse")
 library("stringr")
+library("rlang")
 #library("printr")
 knitr::opts_chunk$set(comment=NA)
 ```
@@ -126,15 +127,20 @@ narrative <- all_data %>% map(content) %>% map("result") %>%
 This is an example of how one species can have more than 1 string paragraph of narrative. This will need to deal with later.
 ```{r}
 (map_int(narrative, length) >1) %>% which()
-narrative[606]
+narrative[57]
 ```
 
 Lets extract the extinction date for species that have dates in their narrative. We created a custom function to extract any 4 digit number from the rationales. We then unlist them as they are nested in lists as we have seen above.
+#Trying to only pull largest date, not both.
 ```{r}
 extinc_year <- map(narrative, function(x){
   str_extract_all(x, "\\d{4}") %>% 
   unlist()
 }) 
+#*flow control logic? to rturn NA for miss data
+#  possibly
+extinc_year
+
 ```
 
 Here is the function that will bin the years for all species into the specific bins for our final graph. Since we are using bins of interval 100 years. It is reasonable to put them in these bins. For rationales of species that contain more than one year, we will collapse them if they're in the same bin. If they are Null values, we will give them NA as values. 
@@ -142,22 +148,41 @@ Here is the function that will bin the years for all species into the specific b
 bin_year <- function(x) {
   x = as.integer(x)
     case_when(
-      between(x, 1500, 1600) ~ "1600",
-      between(x, 1600, 1700) ~ "1700",
-      between(x, 1700, 1800) ~ "1800",
-      between(x, 1800, 1900) ~ "1900",
-      between(x, 1900, 2000) ~ "2000",
-      !between(x, 1500, 2000) ~ as.character("not a year"),
+      between(x, 1500, 1600) ~ "1500",
+      between(x, 1600, 1700) ~ "1600",
+      between(x, 1700, 1800) ~ "1700",
+      between(x, 1800, 1900) ~ "1800",
+      between(x, 1900, 2020) ~ "1900",
+      !between(x, 1500, 2020) ~ as.character("not a year"),
       length(x) < 1 ~ as.character(NA)) %>%
-      unique()
-    }
+      unique() %>%
+      max()
+}
+```
+
+```{r}
+bin_year <- function(x) {
+  if(length(x)==0) return(NA)
+  x = as.integer(x)
+    case_when(
+      rlang::is_empty(x) ~ 1900,
+      between(x, 1500, 1600) ~ 1500,
+      between(x, 1600, 1700) ~ 1600,
+      between(x, 1700, 1800) ~ 1700,
+      between(x, 1800, 1900) ~ 1800,
+      between(x, 1900, 2020) ~ 1900,
+      !between(x, 1500, 2020) ~ 0)
+      unique() %>%
+      max()
+}
 ```
 
 Here we apply our binning function to all the years that we extracted from the rationale. We will take a look an 10 of them as an example of how the years in each rationale is now a single number unless there is something funky. To be continue next week...
 ```{r}
 all_year <- 
-  map(extinc_year, bin_year)
-all_year[100:110]
+  map(extinc_year, bin_year) %>%
+  as.integer() %>% 
+  replace_na(1900)
 all_year
 ```
 
@@ -165,15 +190,25 @@ Here we are interested in counting how many species per class went extinct. This
 Again we know 910 species went extinct in total. 
 ```{r}
 num_species <- all_species %>% count(class, sort= TRUE)
-num_species
+all_species_with_year <- all_species %>%
+  mutate("extinct_year" = all_year)
+all_species_with_year
 ```
 
 The background rate used by Gerardo Ceballos is 2 mammal extinctions per 10,000 species per 100 years (2E/MSY). The modern extinction rate is 100 times higher than this background rate. 
 
 We can compare the rates of extinction between using "EX" = "extinction" category and "EW" = "extinction in the wild" and "PE" = "possibly extinct"
 
-We need to create a table that has year the species went extinct with the species name to plot on a graph.
+#use merge to combine both tables
 ```{r}
+
+```
+
+We need to create a table that has rows of species that went extinct and year the species went extinct
+```{r}
+joined <- left_join(all_year, all_species, by = "scientific_name")
+rbind()
+
 ```
 
 

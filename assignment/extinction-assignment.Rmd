@@ -199,17 +199,7 @@ The background rate used by Gerardo Ceballos is 2 mammal extinctions per 10,000 
 
 We can compare the rates of extinction between using "EX" = "extinction" category and "EW" = "extinction in the wild" and "PE" = "possibly extinct"
 
-#use merge to combine both tables
-```{r}
 
-```
-
-We need to create a table that has rows of species that went extinct and year the species went extinct
-```{r}
-joined <- left_join(all_year, all_species, by = "scientific_name")
-rbind()
-
-```
 
 
 

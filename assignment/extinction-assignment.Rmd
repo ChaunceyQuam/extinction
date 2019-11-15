@@ -12,6 +12,7 @@ library("jsonlite")
 library("tidyverse")
 library("stringr")
 library("rlang")
+library("ggplot2")
 #library("printr")
 knitr::opts_chunk$set(comment=NA)
 ```
@@ -58,7 +59,9 @@ token <- "9bb4facb6d23f48efbf424bb05c0c1ef1cf6f468393bc745d42179ac4aca5fee"
 #write a function to get http, clue everything together to make a url that iterates over the vector of page_number
 all_pages <- paste0(species_ap, page, page_number, query, token)
 
+```
 
+```{r cache = TRUE}
 #apply map to all_pages a vector
 all_results <- map(all_pages, GET)
 ```
@@ -74,7 +77,8 @@ Turning data into "rectangle" as a dataframe and find species categorized under 
 row_to_tibble <- function(row){
   tibble(scientific_name = row$scientific_name, 
          category = row$category, 
-         class = row$class_name)
+         class = row$class_name,
+         kingdom = row$kingdom_name)
 }
 
 get_result <- function(x){
@@ -82,6 +86,15 @@ get_result <- function(x){
   map_dfr(row_to_tibble)
 }
 
+```
+
+How many species are evaluated by the IUNC.
+```{r}
+total_amount <- length(all_results %>% map_dfr(get_result))
+```
+
+
+```{r cache=TRUE}
 all_species <- all_results  %>% map_dfr(get_result) %>% filter(category=="EX")
 all_species
 ```
@@ -89,6 +102,10 @@ all_species
 We can see that 910 species went extinct. Let's see the unique classes of species.
 ```{r}
 unique(all_species$class)
+```
+
+```{r}
+unique(all_species$kingdom)
 ```
 
 Lets get the narrative text for each species listed as extinct. Here we are setting up the url to be called in the RESTful API.
@@ -117,7 +134,7 @@ if (!file.exists("massive_resp.rds")){
 
 We will need to get the rationale section for each species in order to find out what date they went extinct. 
 Here are the narratives of the species, the ones that are NULL are stored as NA.
-```{r}
+```{r cache=TRUE}
 map_chr_na <- possibly(map_chr, as.character(NA))
 
 narrative <- all_data %>% map(content) %>% map("result") %>% 
@@ -137,10 +154,6 @@ extinc_year <- map(narrative, function(x){
   str_extract_all(x, "\\d{4}") %>% 
   unlist()
 }) 
-#*flow control logic? to rturn NA for miss data
-#  possibly
-extinc_year
-
 ```
 
 Here is the function that will bin the years for all species into the specific bins for our final graph. Since we are using bins of interval 100 years. It is reasonable to put them in these bins. For rationales of species that contain more than one year, we will collapse them if they're in the same bin. If they are Null values, we will give them NA as values. 
@@ -160,30 +173,13 @@ bin_year <- function(x) {
 }
 ```
 
-```{r}
-bin_year <- function(x) {
-  if(length(x)==0) return(NA)
-  x = as.integer(x)
-    case_when(
-      rlang::is_empty(x) ~ 1900,
-      between(x, 1500, 1600) ~ 1500,
-      between(x, 1600, 1700) ~ 1600,
-      between(x, 1700, 1800) ~ 1700,
-      between(x, 1800, 1900) ~ 1800,
-      between(x, 1900, 2020) ~ 1900,
-      !between(x, 1500, 2020) ~ 0)
-      unique() %>%
-      max()
-}
-```
-
 Here we apply our binning function to all the years that we extracted from the rationale. We will take a look an 10 of them as an example of how the years in each rationale is now a single number unless there is something funky. To be continue next week...
-```{r}
+```{r warning=FALSE}
 all_year <- 
-  map(extinc_year, bin_year) %>%
+  extinc_year %>% 
+  map(possibly(bin_year, NA_real_)) %>%
   as.integer() %>% 
   replace_na(1900)
-all_year
 ```
 
 Here we are interested in counting how many species per class went extinct. This will be useful to calculate the fractions later for our final graph. 
@@ -194,6 +190,30 @@ all_species_with_year <- all_species %>%
   mutate("extinct_year" = all_year)
 all_species_with_year
 ```
+
+Lets' reproduce the graph that Cellabos made for cummulative extinctions as a percent of all IUNC-evaluated species.
+
+```{r}
+verte <- c("MAMMALIA","AVES","REPTILIA","AMPHIBIA")
+
+
+birds <- all_species_with_year %>% filter(kingdom == "ANIMALIA", class == "AVES")
+mammals <- all_species_with_year %>% filter(kingdom == "ANIMALIA", class == "MAMMALIA")
+vertebrate <- all_species_with_year %>% filter(class %in% verte)
+all_other <- all_species_with_year %>% filter(!class %in% verte)
+                                              
+all_other
+```
+
+Lets create a master table 
+```{r}
+master <- rbind(birds, mammals, vertebrate, all_other) %>% 
+  group_by(class, extinct_year) %>%
+  mutate(sum_extinct = tally(birds))
+master
+```
+
+
 
 The background rate used by Gerardo Ceballos is 2 mammal extinctions per 10,000 species per 100 years (2E/MSY). The modern extinction rate is 100 times higher than this background rate. 
 

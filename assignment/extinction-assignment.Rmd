@@ -93,19 +93,15 @@ How many species are evaluated by the IUNC.
 total_amount <- length(all_results %>% map_dfr(get_result))
 ```
 
-
+According to the paper by Ceballos on species extinction, he selected both extinct species and extinct in the wild species, as categorized by the IUCN. We will try to reproduce his result by selecting the same categories.
 ```{r cache=TRUE}
-all_species <- all_results  %>% map_dfr(get_result) %>% filter(category=="EX")
+all_species <- all_results  %>% map_dfr(get_result) %>% filter(category=="EX"| category=="EW")
 all_species
 ```
 
 We can see that 910 species went extinct. Let's see the unique classes of species.
 ```{r}
 unique(all_species$class)
-```
-
-```{r}
-unique(all_species$kingdom)
 ```
 
 Lets get the narrative text for each species listed as extinct. Here we are setting up the url to be called in the RESTful API.
@@ -192,27 +188,77 @@ all_species_with_year
 ```
 
 Lets' reproduce the graph that Cellabos made for cummulative extinctions as a percent of all IUNC-evaluated species.
-
 ```{r}
 verte <- c("MAMMALIA","AVES","REPTILIA","AMPHIBIA")
 
 
-birds <- all_species_with_year %>% filter(kingdom == "ANIMALIA", class == "AVES")
-mammals <- all_species_with_year %>% filter(kingdom == "ANIMALIA", class == "MAMMALIA")
+birds <- all_species_with_year %>% filter(class == "AVES")
+mammals <- all_species_with_year %>% filter(class == "MAMMALIA")
 vertebrate <- all_species_with_year %>% filter(class %in% verte)
 all_other <- all_species_with_year %>% filter(!class %in% verte)
                                               
-all_other
+
+vert <- vertebrate %>%
+  group_by(extinct_year) %>%
+  summarize(count = n()) %>%
+  mutate(name = "vertebrate")
+
+birdies <- birds %>%
+  group_by(extinct_year) %>%
+  summarize(count = n()) %>%
+  mutate(name = "birds")
+
+mammalies <- mammals %>%
+  group_by(extinct_year) %>%
+  summarize(count = n()) %>%
+  mutate(name = "mammals")
+
+others <- all_other %>%
+  group_by(extinct_year) %>%
+  summarize(count = n()) %>%
+  mutate(name = "Other vertebrates")
 ```
 
-Lets create a master table 
 ```{r}
-master <- rbind(birds, mammals, vertebrate, all_other) %>% 
-  group_by(class, extinct_year) %>%
-  mutate(sum_extinct = tally(birds))
-master
+master_ex_table <- rbind(birdies, mammalies, vert, others)
+master_ex_table
+```
+```{r}
+all_extinct_total <- data.frame(name = c("birds", "mammals", "vertebrate", "Other vertebrates"), 
+                                  value_sum = c(nrow(birds_total), nrow(mammals_total), nrow(vertebrate_total),nrow(all_other_total)))
+all_extinct_total                                
+
+master_ex_table <- rbind(birdies, mammalies, vert, others) %>%
+  left_join(all_extinct_total) %>%
+  mutate(fraction_extinct = count/ value_sum)
+master_ex_table
+```
+```{r cache=TRUE}
+all_species_count <- all_results  %>% map_dfr(get_result)
 ```
 
+This is the total number of species evaluated by the ICUN
+```{r}
+nrow(all_species_count)
+```
+Lets create a master table
+
+```{r}
+birds_total <- all_species_count %>% filter(class == "AVES")
+mammals_total <- all_species_count %>% filter(class == "MAMMALIA")
+vertebrate_total <- all_species_count %>% filter(class %in% verte)
+all_other_total <- all_species_count %>% filter(!class %in% verte)
+                                              
+
+```
+
+```{r}
+num_species <- all_species %>% count(class, sort= TRUE)
+all_species_with_year <- all_species %>%
+  mutate("extinct_year" = all_year) %>%
+  arrange(extinct_year, class)
+all_species_with_year
+```
 
 
 The background rate used by Gerardo Ceballos is 2 mammal extinctions per 10,000 species per 100 years (2E/MSY). The modern extinction rate is 100 times higher than this background rate. 

@@ -1,5 +1,5 @@
 ---
-title: "Extinctions Unit"
+title: "The Sixth Mass Extinctions"
 author: "Alice Hua, Chancey Quam"
 maketitle: true
 output: github_document
@@ -17,7 +17,7 @@ library("ggplot2")
 knitr::opts_chunk$set(comment=NA)
 ```
 
-## Extinctions Module
+## Mass Extinctions Module
 
 _Are we experiencing the sixth great extinction?_  
 
@@ -48,7 +48,9 @@ Our focal task will be to reproduce the result from Ceballos and colleagues show
 - [Pimm et al (2014)](http://doi.org/10.1126/science.1246752)
 - [Sandom et al (2014)](http://dx.doi.org/10.1098/rspb.2013.3254)
 
-Reading in data from the IUCN Red List site RESTful API
+### Data about the species:
+
+Here we use RESTful API to read in data about all species evaluated by the IUCN Red List.
 ```{r}
 species_ap <- "https://apiv3.iucnredlist.org/api/v3/species"
 page <- "/page/"
@@ -58,10 +60,10 @@ token <- "9bb4facb6d23f48efbf424bb05c0c1ef1cf6f468393bc745d42179ac4aca5fee"
 
 #write a function to get http, clue everything together to make a url that iterates over the vector of page_number
 all_pages <- paste0(species_ap, page, page_number, query, token)
-
 ```
 
-```{r cache = TRUE}
+We will get the results for all 10 pages, each has 10,000 records of all species published. 
+```{r all_results, cache = TRUE}
 #apply map to all_pages a vector
 all_results <- map(all_pages, GET)
 ```
@@ -72,7 +74,7 @@ row <- all_results[[1]] %>% content() %>% getElement("result") %>% getElement(1)
 names(row)
 ```
 
-Turning data into "rectangle" as a dataframe and find species categorized under extinction.
+Here we turn the data into "rectangle" as a dataframe. According to the paper by Ceballos on species extinctions, Both extinct species and extinct in the wild species were selected to make their final graph. To reproduce their result, we are filtering to have only species under the two categories.
 ```{r}
 row_to_tibble <- function(row){
   tibble(scientific_name = row$scientific_name, 
@@ -87,24 +89,19 @@ get_result <- function(x){
 }
 
 ```
-
-How many species are evaluated by the IUNC.
-```{r}
-total_amount <- length(all_results %>% map_dfr(get_result))
-```
-
-According to the paper by Ceballos on species extinction, he selected both extinct species and extinct in the wild species, as categorized by the IUCN. We will try to reproduce his result by selecting the same categories.
 ```{r cache=TRUE}
 all_species <- all_results  %>% map_dfr(get_result) %>% filter(category=="EX"| category=="EW")
 all_species
 ```
 
-We can see that 910 species went extinct. Let's see the unique classes of species.
+We can see that 989 species went extinct. Let's see the unique classes of species.
 ```{r}
 unique(all_species$class)
 ```
 
-Lets get the narrative text for each species listed as extinct. Here we are setting up the url to be called in the RESTful API.
+### Data about the species extinction dates:
+
+Lets get the extinction dates for these species. The data is store in the narrative text for each species. Again, we are setting up the url to be called in the RESTful API.
 ```{r}
 #setting the species table individually
 all_extinct <- all_species %>% pull(scientific_name)
@@ -118,7 +115,7 @@ token <- "9bb4facb6d23f48efbf424bb05c0c1ef1cf6f468393bc745d42179ac4aca5fee"
 url <- paste0(base, narrative, name_group1, query, token)
 ```
 
-I have already called the urls for all the extinct species (this will take awhile) and saved it as an R object RDS. The code chunk below will load the object if the file exists or it will download the data if the file doesn't exist. Then this object consists of all extinct species is read into all_data.
+We have already called the urls for all the extinct species (this will take awhile) and saved it as an R object RDS. The code chunk below will load the object if the file exists or it will download the data if the file doesn't exist. Then this object consists of all extinct and extinct in the wild species is read into all_data.
 ```{r}
 if (!file.exists("massive_resp.rds")){
   resp <- map(url, GET)
@@ -129,7 +126,7 @@ if (!file.exists("massive_resp.rds")){
 ```
 
 We will need to get the rationale section for each species in order to find out what date they went extinct. 
-Here are the narratives of the species, the ones that are NULL are stored as NA.
+Here are the narratives of the species, the narratives that are NULL are stored as NA.
 ```{r cache=TRUE}
 map_chr_na <- possibly(map_chr, as.character(NA))
 
@@ -137,14 +134,13 @@ narrative <- all_data %>% map(content) %>% map("result") %>%
   map(map_chr_na, "rationale")
 ```
 
-This is an example of how one species can have more than 1 string paragraph of narrative. This will need to deal with later.
+This is an example of how one species can have more than 1 string paragraph of narrative. This will need to deal with in the next step.
 ```{r}
 (map_int(narrative, length) >1) %>% which()
-narrative[57]
+narrative[666]
 ```
 
 Lets extract the extinction date for species that have dates in their narrative. We created a custom function to extract any 4 digit number from the rationales. We then unlist them as they are nested in lists as we have seen above.
-#Trying to only pull largest date, not both.
 ```{r}
 extinc_year <- map(narrative, function(x){
   str_extract_all(x, "\\d{4}") %>% 
@@ -152,16 +148,18 @@ extinc_year <- map(narrative, function(x){
 }) 
 ```
 
-Here is the function that will bin the years for all species into the specific bins for our final graph. Since we are using bins of interval 100 years. It is reasonable to put them in these bins. For rationales of species that contain more than one year, we will collapse them if they're in the same bin. If they are Null values, we will give them NA as values. 
+Here is the function that will bin the years for all species into the specific bins for our final graph. Since we are using bins of interval 100 years. It is reasonable to put them in these bins. 
+For rationales of species that contain more than one year, if the years are within the 100-year interval, we will collapse them into the same bin. If they are not within the 100-year interval however, we will select the latest year and put it in the corresponding bin. We chose to do so because we observed that the narratives have a tendency to list the last seen date as the date of approximate extinction.
+Lastly, if there is no narrative, or Null values, we will give them NA as values. 
 ```{r}
 bin_year <- function(x) {
   x = as.integer(x)
     case_when(
-      between(x, 1500, 1600) ~ "1500",
-      between(x, 1600, 1700) ~ "1600",
-      between(x, 1700, 1800) ~ "1700",
-      between(x, 1800, 1900) ~ "1800",
-      between(x, 1900, 2020) ~ "1900",
+      between(x, 1500, 1600) ~ "1600",
+      between(x, 1600, 1700) ~ "1700",
+      between(x, 1700, 1800) ~ "1800",
+      between(x, 1800, 1900) ~ "1900",
+      between(x, 1900, 2020) ~ "2000",
       !between(x, 1500, 2020) ~ as.character("not a year"),
       length(x) < 1 ~ as.character(NA)) %>%
       unique() %>%
@@ -169,29 +167,27 @@ bin_year <- function(x) {
 }
 ```
 
-Here we apply our binning function to all the years that we extracted from the rationale. We will take a look an 10 of them as an example of how the years in each rationale is now a single number unless there is something funky. To be continue next week...
+Here we apply our binning function to all the years that we extracted from the species rationale to come up an extinction date for each species. It is important to note that we assigned all null narratives which were replaced to NAs by our binning function earlier to have 1900 as its values. Our rationale is that although we do not have the exact date to bin these species, they are nonetheless listed as extinct as of now, which is in the 20th century.
 ```{r warning=FALSE}
 all_year <- 
   extinc_year %>% 
   map(possibly(bin_year, NA_real_)) %>%
   as.integer() %>% 
-  replace_na(1900)
+  replace_na(2000)
 ```
 
-Here we are interested in counting how many species per class went extinct. This will be useful to calculate the fractions later for our final graph. 
-Again we know 910 species went extinct in total. 
+Here are are adding the dates of 989 extinct dates that we derived from the narratives earlier to the table of 989 species from our initial species table which consists of EX - Extinct and EW - Extinct in the Wild species.
 ```{r}
-num_species <- all_species %>% count(class, sort= TRUE)
 all_species_with_year <- all_species %>%
   mutate("extinct_year" = all_year)
 all_species_with_year
 ```
 
-Lets' reproduce the graph that Cellabos made for cummulative extinctions as a percent of all IUNC-evaluated species.
+### Reproduce the graph that Cellabos made for cummulative extinctions as percentages of all IUNC-evaluated species
+
+Here we have the sorted the species table with extinction dates into 4 different groups Mammals, Birds, Vertebrates and Other vertebrates. 
 ```{r}
 verte <- c("MAMMALIA","AVES","REPTILIA","AMPHIBIA")
-
-
 birds <- all_species_with_year %>% filter(class == "AVES")
 mammals <- all_species_with_year %>% filter(class == "MAMMALIA")
 vertebrate <- all_species_with_year %>% filter(class %in% verte)
@@ -201,63 +197,52 @@ all_other <- all_species_with_year %>% filter(!class %in% verte)
 vert <- vertebrate %>%
   group_by(extinct_year) %>%
   summarize(count = n()) %>%
-  mutate(name = "vertebrate")
+  mutate(name = "Vertebrate")
 
 birdies <- birds %>%
   group_by(extinct_year) %>%
   summarize(count = n()) %>%
-  mutate(name = "birds")
+  mutate(name = "Birds")
 
 mammalies <- mammals %>%
   group_by(extinct_year) %>%
   summarize(count = n()) %>%
-  mutate(name = "mammals")
+  mutate(name = "Mammals")
 
 others <- all_other %>%
   group_by(extinct_year) %>%
   summarize(count = n()) %>%
-  mutate(name = "Other vertebrates")
-```
+  mutate(name = "Other Vertebrates")
 
-```{r}
 master_ex_table <- rbind(birdies, mammalies, vert, others)
 master_ex_table
 ```
+
+Tn order to arrive at the fractions of accumulative extinctions as percentages of IUCN-evaluated species, we need to divide the total of a species of each group in each bin to the total number of that species.
+To get each special total count, we made a new table to have only total counts for 4 groups (birds, mammals, vertebrate, other vertebrates). 
+We joined this table to our current master extict table to create another more comprehensive table. With the total counts and species count per bin year, we can arrive at the fraction desired. 
 ```{r}
-all_extinct_total <- data.frame(name = c("birds", "mammals", "vertebrate", "Other vertebrates"), 
-                                  value_sum = c(nrow(birds_total), nrow(mammals_total), nrow(vertebrate_total),nrow(all_other_total)))
+all_extinct_total <- data.frame(name = c("Birds", "Mammals", "Vertebrate", "Other Vertebrates"), 
+                                  sum_species = c(nrow(birds), nrow(mammals), nrow(vertebrate),nrow(all_other)))
 all_extinct_total                                
 
 master_ex_table <- rbind(birdies, mammalies, vert, others) %>%
   left_join(all_extinct_total) %>%
-  mutate(fraction_extinct = count/ value_sum)
+  mutate(fraction_extinct = count/ sum_species)
 master_ex_table
 ```
-```{r cache=TRUE}
-all_species_count <- all_results  %>% map_dfr(get_result)
-```
 
-This is the total number of species evaluated by the ICUN
+Comparing to the Fig. 1 graph in Ceballos's paper, we see that the graph was made using data as of 2012. It has been almost 8 years since then. Our graph is reflecting the changes in the extinction rates. 
+
+![](https://espm-157.carlboettiger.info/img/extinctions.jpg)
 ```{r}
-nrow(all_species_count)
-```
-Lets create a master table
-
-```{r}
-birds_total <- all_species_count %>% filter(class == "AVES")
-mammals_total <- all_species_count %>% filter(class == "MAMMALIA")
-vertebrate_total <- all_species_count %>% filter(class %in% verte)
-all_other_total <- all_species_count %>% filter(!class %in% verte)
-                                              
-
-```
-
-```{r}
-num_species <- all_species %>% count(class, sort= TRUE)
-all_species_with_year <- all_species %>%
-  mutate("extinct_year" = all_year) %>%
-  arrange(extinct_year, class)
-all_species_with_year
+master_ex_table %>% ggplot(aes(x = extinct_year, group = name, color = name)) +
+  geom_line(aes(y = fraction_extinct)) +
+  labs(title = "Cumulative Vertebrate Species as EX or EW by the IUCN 2019",
+       y = 'Cumulative extinctions as % of UCN-evaluated species',
+       x = "Time interval") +
+  
+    
 ```
 
 

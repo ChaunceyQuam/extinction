@@ -31,7 +31,7 @@ All team repositories will also include most of the special files found here:
 - `.travis.yml`: A configuration file for automatically running [continuous integration](https://travis-ci.com) checks to verify reproducibility of all `.Rmd` notebooks in the repo.  If all `.Rmd` notebooks can render successfully, the "Build Status" badge above will be green (`build success`), otherwise it will be red (`build failure`).  
 - `DESCRIPTION` a metadata file for the repository, based on the R package standard. It's main purpose here is as a place to list any additional R packages/libraries needed for any of the `.Rmd` files to run.
 
-### This project is a part of our course on [Data Science for Global Change Ecology](https://espm-157.carlboettiger.info/):
+### This project is a part of our course on [ESPM 157: Data Science for Global Change Ecology](https://espm-157.carlboettiger.info/):
 [![](spatial/images/classpic.JPG)](https://espm-157.carlboettiger.info/)
 
 

@@ -19,11 +19,11 @@ All work for this assignment should be in the `assignment` directory.  You will 
 All team repositories will also include most of the special files found here:
 
 ### Common files
-- Since we are using the REST API to pull data directly from the server, we do not have any data stored in our assignment folder. However you will find a cache folder that we stored our GET requests in to save time from running the GET requests everytime we revisit the markdown.
-- There is a massive_resp.rds stored as an R object, it contains the narratives that we used to extract the extinction dates. Due to the large size of this file, we git ignored it when pushing this repo to Github. When rerunning our codes locally, they will automatically download the data and stored this large file locally on your comp. Make sure to not push this to Github to avoid a foreseeable unfortunate event.
+- `extinction-assigment_cache` is a cache folder that we used to store our GET requests cache in case we need to rerun our markdown.
+- `massive_resp.rds` stored as an R object, it contains the narratives that we used to extract the extinction dates. Due to the large size of this file, we git ignored it when pushing this repo to Github. When rerunning our codes locally, they will automatically download the data and stored this large file locally on your comp. Make sure to not push this to Github to avoid a foreseeable unfortunate event.
 - `README.md` this file, a general overview of the repository in markdown format.  
 - `.gitignore` Optional file, ignore common file types we don't want to accidentally commit to GitHub. Most projects should use this. 
-- `<REPO-NAME>.Rproj` Optional, an R-Project file created by RStudio for it's own configuration.  Some people prefer to `.gitignore` this file.
+- `extinction-template.Rproj` Optional, an R-Project file created by RStudio for it's own configuration.  Some people prefer to `.gitignore` this file.
 
 
 ### Infrastructure for Testing

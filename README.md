@@ -3,10 +3,12 @@
 
 ## Team Members:
 
-- full name, github handle
+- Alice Hua, [@alicehua11](https://github.com/alicehua11)
 - full name, github handle
 
-This repository is a template for your team's repository.
+This assignment examines whether we are undergoing a sixth mass extinction based on data from the [International Union for Conservation of Nature (IUCN) redlist](https://www.iucnredlist.org/). 
+Throughout this assignment, we try to replicate a study by Gerardo Ceballos and colleagues in assessing the current rates of species extictions, particularly, the mammals, birds, vertebrates and other vertebrates and comparing them to the background extinction rates, which are assumed to be between 0.1 - 1 species extinction per million species per year E/MSY).
+We will use REST API to pull data about species and regular expression to extract their extinction dates. Here, we transform the data into regular data to make our final graphs and draw a conclusion.
 
 ## assignment
 
@@ -17,6 +19,7 @@ All work for this assignment should be in the `assignment` directory.  You will 
 All team repositories will also include most of the special files found here:
 
 ### Common files
+- Since we are using the REST API to pull data directly from the server, we do not have any data stored in our assignment folder. However you will find a cache folder that we stored our GET requests in to save time from running the GET requests everytime we revisit the markdown.
 
 - `README.md` this file, a general overview of the repository in markdown format.  
 - `.gitignore` Optional file, ignore common file types we don't want to accidentally commit to GitHub. Most projects should use this. 

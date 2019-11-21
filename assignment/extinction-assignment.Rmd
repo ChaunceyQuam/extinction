@@ -235,12 +235,16 @@ master_ex_table
 Comparing to the Fig. 1 graph in Ceballos's paper, we see that the graph was made using data as of 2012. It has been almost 8 years since then. Our graph is reflecting the changes in the extinction rates. 
 
 ![](https://espm-157.carlboettiger.info/img/extinctions.jpg)
+
 ```{r}
-master_ex_table %>% ggplot(aes(x = extinct_year, group = name, color = name)) +
-  geom_line(aes(y = fraction_extinct)) +
+master_ex_table %>% ggplot(aes(x = factor(extinct_year), group = name, color = name)) +
+  geom_line(aes(y = fraction_extinct), lwd = 1.2) +
   labs(title = "Cumulative Vertebrate Species as EX or EW by the IUCN 2019",
        y = 'Cumulative extinctions as % of UCN-evaluated species',
-       x = "Time interval") +
+       x = "Time interval") + 
+  scale_x_discrete(labels=c("1500-1600", "1600-1700", "1700-1800", "1800-1900", "1900-2000")) +
+  theme_classic() +
+  theme(text = element_text(size=10))
   
     
 ```

@@ -1,5 +1,5 @@
 
-*[![Build Status](https://travis-ci.com/espm-157/extinction-extinction-quam-hua.svg?token=7gSxV1VqqHz7TUXHHWGp&branch=master)](https://travis-ci.com/espm-157/extinction-extinction-quam-hua)*
+[![Build Status](https://travis-ci.com/espm-157/extinction-extinction-quam-hua.svg?token=7gSxV1VqqHz7TUXHHWGp&branch=master)](https://travis-ci.com/espm-157/extinction-extinction-quam-hua)*
 
 ## Team Members:
 

@@ -5,7 +5,6 @@ maketitle: true
 output: github_document
 ---
 
-Loading all necessary libraries that we will be using.
 ```{r include=FALSE}
 library("tidyverse")
 library("httr")
@@ -273,7 +272,7 @@ master_ex_table %>% ggplot(aes(x = factor(extinct_year), group = group, color = 
 Comparing to the Fig. 1 graph in Ceballos's paper, we see that the graph was made using IUCN data as of 2012. It has been almost 8 years since then. We therefore suspect that our graph is reflecting the changes in the extinction rates. Particularly, we see an elevated rate of extinction for the vertebrates group.
 However, we can only say that this result shows the maximum possible veterbrate extinctions with N.A values for extinction dates accounted for.
 Now, We want to reproduce the data without the NA values to see the difference.
-```{r}
+```{r warning = FALSE}
 all_year_noNA <- 
   extinc_year %>% 
   map(possibly(bin_year, NA_real_)) %>%
@@ -437,7 +436,8 @@ plot4 <-master_ex_table %>% filter(group == "Other Vertebrates") %>%
 grid.arrange(plot1, plot2, plot3, plot4, ncol = 2)
 ```
 
-We can agree that the modern rates of vertebrate extinction are much higher than the background rate mentioned in Ceballos's paper at 2 mammal extinctions per 10,000 species per 100 years (2E/MSY). Instead of using the extinction categories: "EX" = "extinction" category and "EW" = "extinction in the wild" and "PE" = "possibly extinct" to estimate a reasonable conservative extinction rates, we looked at the different ways NA values can affect the final findings. We decided to look the highest and lowest possible extinction rates by including and excluding NAs. We ventured into interpolating an uncertainty line between the two using the excluded NA data proportions for each group of vertebrates. We find that there is no best answer to the exact rates of extinction but rather, we can confirm Ceballos's statement that the current extinction rate is much higher than the background rate. 
+The uncertainly line for birds is unusally lower at 2000 than the lowest possible extinction line. Due to time constraint, we have not been able to discover why this is such. However, the discuss on dealing with NAs is one to be continued throughout all of our future research.
+In all, we can agree that the modern rates of vertebrate extinction are much higher than the background rate mentioned in Ceballos's paper at 2 mammal extinctions per 10,000 species per 100 years (2E/MSY). Instead of using the extinction categories: "EX" = "extinction" category and "EW" = "extinction in the wild" and "PE" = "possibly extinct" to estimate a reasonable conservative extinction rates, we looked at the different ways NA values can affect the final findings. We decided to look the highest and lowest possible extinction rates by including and excluding NAs. We ventured into interpolating an uncertainty line between the two using the excluded NA data proportions for each group of vertebrates. We find that there is no best answer to the exact rates of extinction but rather, we can confirm Ceballos's statement that the current extinction rate is much higher than the background rate. 
 
 
 

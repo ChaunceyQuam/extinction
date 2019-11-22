@@ -7,8 +7,9 @@
 - Chauncey Quam, [@ChanceyQuam](https://github.com/ChaunceyQuam)
 
 This assignment examines whether we are undergoing a sixth mass extinction based on data from the [International Union for Conservation of Nature (IUCN) redlist](https://www.iucnredlist.org/). 
-Throughout this assignment, we try to replicate a study by Gerardo Ceballos and colleagues in assessing the current rates of species extictions, particularly, the mammals, birds, vertebrates and other vertebrates and comparing them to the background extinction rates, which are assumed to be between 0.1 - 1 species extinction per million species per year E/MSY).
-We will use RESTful API to pull data about species and regular expression to extract their extinction dates. Here, we transform the data into regular data to make our final graphs and draw a conclusion.
+Throughout this assignment, we try to replicate a study by Gerardo Ceballos and colleagues in assessing the current rates of vertebrate extictions, particularly, the mammals, birds, vertebrates and other vertebrates. While Caballos compares the their findings to the background extinction rates, which are assumed to be between 0.1 - 1 species extinction per million species per year E/MSY, we are interested in comparing the extinction rates computed by slightly different parameters: with NA values, without NA values, an interpolated estimate of NA values in our final findings.
+We will use RESTful API to pull data about species and regular expression to extract their extinction dates. 
+Lastly, we transform the data into "rectangular" data to make our final graphs and draw comparisons.
 
 ## assignment
 
@@ -32,7 +33,7 @@ All team repositories will also include most of the special files found here:
 - `DESCRIPTION` a metadata file for the repository, based on the R package standard. It's main purpose here is as a place to list any additional R packages/libraries needed for any of the `.Rmd` files to run.
 
 ### This project is a part of our course on [ESPM 157: Data Science for Global Change Ecology](https://espm-157.carlboettiger.info/):
-[![](spatial/images/classpic.JPG)](https://espm-157.carlboettiger.info/)
+[![](images/classpic.JPG)](https://espm-157.carlboettiger.info/)
 
 
 

@@ -74,29 +74,28 @@ row <- all_results[[1]] %>% content() %>% getElement("result") %>% getElement(1)
 names(row)
 ```
 
-Here we turn the data into "rectangle" as a dataframe. According to the paper by Ceballos on species extinctions, Both extinct species and extinct in the wild species were selected to make their final graph. To reproduce their result, we are filtering to have only species under the two categories.
+Using the names we got above, here we turn the data into "rectangle" as a dataframe. According to the paper by Ceballos on species extinctions, Both extinct species and extinct in the wild species were selected to make their final graph. To reproduce their result, we are filtering to have only species under the two categories. 
 ```{r}
 row_to_tibble <- function(row){
   tibble(scientific_name = row$scientific_name, 
          category = row$category, 
-         class = row$class_name,
-         kingdom = row$kingdom_name)
+         phylum = row$phylum_name,
+         class = row$class_name)
 }
 
 get_result <- function(x){
   x %>% content() %>% getElement("result") %>% 
   map_dfr(row_to_tibble)
 }
-
 ```
-```{r cache=TRUE}
+```{r}
 all_species <- all_results  %>% map_dfr(get_result) %>% filter(category=="EX"| category=="EW")
 all_species
 ```
 
-We can see that 989 species went extinct. Let's see the unique classes of species.
+We can see that 989 species went extinct or extinct in the wild. Let's see the unique phylums of species. For the purpose of this study, we will select only the species of Chordata phylum because they are vertebrates.
 ```{r}
-unique(all_species$class)
+unique(all_species$phylum)
 ```
 
 ### Data about the species extinction dates:
@@ -148,7 +147,7 @@ extinc_year <- map(narrative, function(x){
 }) 
 ```
 
-Here is the function that will bin the years for all species into the specific bins for our final graph. Since we are using bins of interval 100 years. It is reasonable to put them in these bins. 
+We will bin the years for all species into the specific bins for our final graph. Since we are using bins of interval 100 years. It is reasonable to put them in these bins. 
 For rationales of species that contain more than one year, if the years are within the 100-year interval, we will collapse them into the same bin. If they are not within the 100-year interval however, we will select the latest year and put it in the corresponding bin. We chose to do so because we observed that the narratives have a tendency to list the last seen date as the date of approximate extinction.
 Lastly, if there is no narrative, or Null values, we will give them NA as values. 
 ```{r}
@@ -167,86 +166,228 @@ bin_year <- function(x) {
 }
 ```
 
-Here we apply our binning function to all the years that we extracted from the species rationale to come up an extinction date for each species. It is important to note that we assigned all null narratives which were replaced to NAs by our binning function earlier to have 1900 as its values. Our rationale is that although we do not have the exact date to bin these species, they are nonetheless listed as extinct as of now, which is in the 20th century.
+Here we apply our binning function to all the years that we extracted from the species rationale to come up an extinction date for each species.
+It is important to note that we assigned all null narratives which were replaced to NAs by our binning function earlier to have 1600 as its values. This is because we will calculate the cumulative sum for each group of species, the cumulative sum would start at the beginning and continue to the latest year, which means that all the species of null dates will get counted from the beginning of our time series and continued to be counted to the end. This would be our maximum possible species that have gone extinct. 
+
 ```{r warning=FALSE}
 all_year <- 
   extinc_year %>% 
   map(possibly(bin_year, NA_real_)) %>%
   as.integer() %>% 
-  replace_na(2000)
+  replace_na(1600)
 ```
 
 Here are are adding the dates of 989 extinct dates that we derived from the narratives earlier to the table of 989 species from our initial species table which consists of EX - Extinct and EW - Extinct in the Wild species.
 ```{r}
 all_species_with_year <- all_species %>%
-  mutate("extinct_year" = all_year)
+  mutate(extinct_year = all_year)
 all_species_with_year
 ```
 
-### Reproduce the graph that Cellabos made for cummulative extinctions as percentages of all IUNC-evaluated species
-
-Here we have the sorted the species table with extinction dates into 4 different groups Mammals, Birds, Vertebrates and Other vertebrates. 
+To reproduce a similar result to Cellabos's final graph, we did the following -
+We sorted the species with extinction dates into 4 different groups: Mammals, Birds, Vertebrates and Other Vertebrates. 
+We included Mammals, Birds and Amphibians in the Vertebrates group. For the Other Vertebrates group we excluded Mammals and Birds and included all species in the Chordata phylum, which includes all other vertebrates. 
 ```{r}
-verte <- c("MAMMALIA","AVES","REPTILIA","AMPHIBIA")
-birds <- all_species_with_year %>% filter(class == "AVES")
-mammals <- all_species_with_year %>% filter(class == "MAMMALIA")
-vertebrate <- all_species_with_year %>% filter(class %in% verte)
-all_other <- all_species_with_year %>% filter(!class %in% verte)
-                                              
+verte <- c("MAMMALIA","AVES","AMPHIBIA")
 
-vert <- vertebrate %>%
-  group_by(extinct_year) %>%
+birds <- all_species_with_year %>% 
+  filter(class == "AVES") %>% mutate(group = "Birds")
+
+mammals <- all_species_with_year %>% 
+  filter(class == "MAMMALIA") %>% mutate(group = "Mammals")
+
+vertebrate <- all_species_with_year %>% 
+  filter(class %in% verte) %>% mutate(group = "Vertebrate")
+
+all_others <- all_species_with_year %>% 
+  filter(phylum == "CHORDATA") %>% 
+  filter(!class %in% c("MAMMALIA", "AVES")) %>% 
+  mutate(group = "Other Vertebrates")
+```
+
+We calculate the cumulative sums for each group. 
+```{r}
+count_sum <- function(table) {
+  new_table <- table %>%
+  group_by(extinct_year, group)%>%
   summarize(count = n()) %>%
-  mutate(name = "Vertebrate")
+  ungroup() %>%
+  mutate(cum_sum = cumsum(count))
+  return(new_table)
+}
 
-birdies <- birds %>%
-  group_by(extinct_year) %>%
-  summarize(count = n()) %>%
-  mutate(name = "Birds")
+birds_sum <- count_sum(birds)
+mam_sum <- count_sum(mammals)
+vert_sum <- count_sum(vertebrate)
+other_sum <- count_sum(all_others)
 
-mammalies <- mammals %>%
-  group_by(extinct_year) %>%
-  summarize(count = n()) %>%
-  mutate(name = "Mammals")
+all_types <- rbind(birds_sum, mam_sum, vert_sum, other_sum)
+all_types
+```
 
-others <- all_other %>%
-  group_by(extinct_year) %>%
-  summarize(count = n()) %>%
-  mutate(name = "Other Vertebrates")
+Now, we also need to get the total of all species for each class, this will be our denominator for the percentage calculation at the end.
+```{r all_species_eval, cache = TRUE}
+all_species_eval <-all_results  %>% map_dfr(get_result)
 
-master_ex_table <- rbind(birdies, mammalies, vert, others)
-master_ex_table
+birds_total  <- birds <- all_species_eval %>% 
+  filter(class == "AVES") %>% mutate(group = "Birds")
+
+mammal_total <- mammals <- all_species_eval %>% 
+  filter(class == "MAMMALIA") %>% mutate(group = "Mammals")
+
+vert_total <- vertebrate <- all_species_eval %>% 
+  filter(class %in% verte) %>% mutate(group = "Vertebrate")
+
+other_total <- all_others <- all_species_eval %>% 
+  filter(phylum == "CHORDATA") %>% 
+  filter(!class %in% c("MAMMALIA", "AVES")) %>% 
+  mutate(group = "Other Vertebrates")
+  
 ```
 
 Tn order to arrive at the fractions of accumulative extinctions as percentages of IUCN-evaluated species, we need to divide the total of a species of each group in each bin to the total number of that species.
 To get each special total count, we made a new table to have only total counts for 4 groups (birds, mammals, vertebrate, other vertebrates). 
 We joined this table to our current master extict table to create another more comprehensive table. With the total counts and species count per bin year, we can arrive at the fraction desired. 
 ```{r}
-all_extinct_total <- data.frame(name = c("Birds", "Mammals", "Vertebrate", "Other Vertebrates"), 
-                                  sum_species = c(nrow(birds), nrow(mammals), nrow(vertebrate),nrow(all_other)))
-all_extinct_total                                
+group_total <- data.frame(group = 
+                                  c("Birds", "Mammals", "Vertebrate", "Other Vertebrates"),                                    
+                          sum_species = 
+                                  c(nrow(birds_total), nrow(mammal_total),                                                      nrow(vert_total),nrow(other_total)))
 
-master_ex_table <- rbind(birdies, mammalies, vert, others) %>%
-  left_join(all_extinct_total) %>%
-  mutate(fraction_extinct = count/ sum_species)
+master_ex_table <- all_types %>%
+  left_join(group_total) %>%
+  mutate(perc_ex_withNA = 100*(cum_sum/ sum_species))
 master_ex_table
 ```
 
-Comparing to the Fig. 1 graph in Ceballos's paper, we see that the graph was made using data as of 2012. It has been almost 8 years since then. Our graph is reflecting the changes in the extinction rates. 
-
-![](https://espm-157.carlboettiger.info/img/extinctions.jpg)
-
+Lets' visualize the highest possible extinction that we calculated by including NA dates in the year bin of 1600.
 ```{r}
-master_ex_table %>% ggplot(aes(x = factor(extinct_year), group = name, color = name)) +
-  geom_line(aes(y = fraction_extinct), lwd = 1.2) +
+master_ex_table %>% ggplot(aes(x = factor(extinct_year), group = group, color = group)) +
+  geom_line(aes(y = perc_ex_withNA), lwd = 1.5) +
   labs(title = "Cumulative Vertebrate Species as EX or EW by the IUCN 2019",
        y = 'Cumulative extinctions as % of UCN-evaluated species',
        x = "Time interval") + 
   scale_x_discrete(labels=c("1500-1600", "1600-1700", "1700-1800", "1800-1900", "1900-2000")) +
+  scale_y_continuous(breaks = seq(0,2, by=0.2)) +
   theme_classic() +
   theme(text = element_text(size=10))
-  
     
+```
+
+Comparing to the Fig. 1 graph in Ceballos's paper, we see that the graph was made using data as of 2012. It has been almost 8 years since then. Our graph is reflecting the changes in the extinction rates. We see an elevated rate of extinction for vertebrates when we include the data from recent years. 
+However, this is the maximum of veterbrate extinctions with N.A values for extinction dates counted.
+Now, We want to reproduce the data without the NA values to see the difference.
+```{r}
+all_year_noNA <- 
+  extinc_year %>% 
+  map(possibly(bin_year, NA_real_)) %>%
+  as.integer()
+
+all_species_noNA <- all_species %>%
+  mutate(extinct_year = all_year_noNA) %>%
+  drop_na()
+all_species_noNA
+
+```
+```{r}
+
+birds_noNa <- all_species_noNA %>% 
+  filter(class == "AVES") %>% mutate(group = "Birds")
+
+mammals_noNa <- all_species_noNA %>% 
+  filter(class == "MAMMALIA") %>% mutate(group = "Mammals")
+
+vertebrate_noNa <- all_species_noNA %>% 
+  filter(class %in% verte) %>% mutate(group = "Vertebrate")
+
+all_others_noNa <- all_species_noNA %>% 
+  filter(phylum == "CHORDATA") %>% 
+  filter(!class %in% c("MAMMALIA", "AVES")) %>% 
+  mutate(group = "Other Vertebrates")
+```
+
+We calculate the cumulative sums for each group, excluding any NA value for extinction year. We will add our results into the master table with the percentages calculated with NA values included.
+```{r}
+birds_sum_noNa <- count_sum(birds_noNa)
+mam_sum_noNa <- count_sum(mammals_noNa)
+vert_sum_noNa <- count_sum(vertebrate_noNa)
+other_sum_noNa <- count_sum(all_others_noNa)
+
+all_types_noNa <- rbind(birds_sum_noNa, mam_sum_noNa, vert_sum_noNa, other_sum_noNa)
+
+master_noNA<- all_types_noNa %>%
+  left_join(group_total) %>%
+  mutate(perc_extinct_noNA = 100*(cum_sum/ sum_species))
+
+master_ex_table <- master_ex_table %>%
+  mutate(perc_ex_noNA = master_noNA$perc_extinct_noNA)
+master_ex_table
+```
+
+Lets' visualize the extinction percentages that we calculated excluding extinction records that had NA values for extinction dates.
+```{r}
+master_ex_table %>% ggplot(aes(x = factor(extinct_year), group = group, color = group)) +
+  geom_line(aes(y = perc_extinct_withNA), lwd = 1.5) +
+  geom_line(aes(y = perc_ex_noNA), linetype = "dashed") +
+  labs(title = "Cumulative Vertebrate Species as EX or EW by the IUCN 2019",
+       y = 'Cumulative extinctions as % of UCN-evaluated species',
+       x = "Time interval") + 
+  scale_x_discrete(labels=c("1500-1600", "1600-1700", "1700-1800", "1800-1900", "1900-2000")) +
+  scale_y_continuous(breaks = seq(0,2, by=0.2)) +
+  theme_classic() +
+  theme(text = element_text(size=10))
+    
+```
+
+The graph above shows the highest and lowest possible extinction percentages for all veterbrates. The solid lines represent the highest values which were generated by including NAs in our initial year bin. The dashed lines represent the lowest values which were generated by excluding NAs.
+We think that the real percentages of extinction are somewhere in between these two lines for each group of species. 
+To do so, we will take interpolate the extinction percentages for the vertebrates that have NA values for their extinction dates. We start with finding the total number of extinctions of NA dates. 
+
+Here is the total number of extinctions that did not have an extinction date.  We see that this value is close to half of our total count of extinct species, meaning we only know the extinction date for slightly over 50% of our extinct species. If we were to leave the species with NA dates out of our final conclusion, that would tell an unaccurate story of the verterbrate extinctions overall.
+```{r}
+na_total <- nrow(all_species_with_year) - nrow(all_species_noNA)
+na_total
+```
+
+
+```{r}
+year_group <- master_noNA %>% arrange(extinct_year) %>%
+  select(extinct_year, count, group) %>%
+  group_by(extinct_year, group) %>%
+  summarise(noNA_total= sum(count)) %>%
+  mutate(noNA_percent = (noNA_total/nrow(all_species_noNA))) %>%
+  mutate(NA_derived_count = noNA_percent * na_total) %>% 
+  select(group, NA_derived_count)
+year_group
+```
+
+ 
+```{r}
+uncertain_perc <- master_noNA %>% 
+  left_join(year_group) %>%
+  mutate(count_low_NA = count + NA_derived_count) %>%
+  group_by(extinct_year, group) %>%
+  summarize(cumsum_lowNA = cumsum(count_low_NA))
+
+master_ex_table <- master_ex_table %>%
+  left_join(uncertain_perc) %>%
+  mutate(perc_ex_uncertain = 100*(cumsum_lowNA/sum_species))
+master_ex_table
+```
+
+```{r}
+master_ex_table %>% filter(group =="Birds") %>% 
+  ggplot(aes(x = factor(extinct_year), group = group)) +
+  geom_line(aes(y = perc_ex_withNA), linetype = "dotdash", lwd=1.2, color = "blue") +
+  geom_line(aes(y = perc_ex_noNA), linetype = "dashed", color= "red") +
+  geom_line(aes(y = perc_ex_uncertain), linetype = "solid", lwd = 1) +
+  labs(title = "Cumulative Vertebrate Species as EX or EW by the IUCN 2019",
+       y = 'Cumulative extinctions as % of UCN-evaluated species',
+       x = "Time interval") + 
+  scale_x_discrete(labels=c("1500-1600", "1600-1700", "1700-1800", "1800-1900", "1900-2000")) +
+  scale_y_continuous(breaks = seq(0,2, by=0.2)) +
+  theme_classic() +
+  theme(text = element_text(size=10))
 ```
 
 

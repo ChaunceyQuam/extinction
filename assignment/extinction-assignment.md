@@ -33,7 +33,7 @@ extinction rates from including and excluding NA values.
 ## Additional references:
 
   - <http://www.hhmi.org/biointeractive/biodiversity-age-humans> (Video)
-  - [Barnosky et al. (2011)](http://doi.org/10.1038/nature09678)
+  - [Barnosky et al. (2011)](http://doi.org/10.1038/nature09678)
   - [Pimm et al (2014)](http://doi.org/10.1126/science.1246752)
   - [Sandom et al (2014)](http://dx.doi.org/10.1098/rspb.2013.3254)
 
@@ -61,7 +61,8 @@ species published.
 all_results <- map(all_pages, GET)
 ```
 
-Let’s look at the names of the data.
+Let’s look at the names of the
+data.
 
 ``` r
 row <- all_results[[1]] %>% content() %>% getElement("result") %>% getElement(1)
@@ -69,10 +70,9 @@ names(row)
 ```
 
 ``` 
- [1] "taxonid"         "kingdom_name"    "phylum_name"    
- [4] "class_name"      "order_name"      "family_name"    
- [7] "genus_name"      "scientific_name" "infra_rank"     
-[10] "infra_name"      "population"      "category"       
+ [1] "taxonid"         "kingdom_name"    "phylum_name"     "class_name"     
+ [5] "order_name"      "family_name"     "genus_name"      "scientific_name"
+ [9] "infra_rank"      "infra_name"      "population"      "category"       
 ```
 
 Using the names we got above, here we turn the data into “rectangular”
@@ -118,7 +118,8 @@ all_species
 We can see that 989 species went extinct or extinct in the wild. Let’s
 see the unique phylums of those species. For the purpose of
 reproducibility, we will select only the species of Chordata phylum
-because they are vertebrates.
+because they are
+vertebrates.
 
 ``` r
 unique(all_species$phylum)
@@ -242,19 +243,19 @@ all_species_with_year
 ```
 
     # A tibble: 989 x 5
-       scientific_name            category phylum    class         extinct_year
-       <chr>                      <chr>    <chr>     <chr>                <dbl>
-     1 Mirogrex hulensis          EX       CHORDATA  ACTINOPTERYG~         2000
-     2 Acanthametropus pecatonica EX       ARTHROPO~ INSECTA               1600
-     3 Achatinella abbreviata     EX       MOLLUSCA  GASTROPODA            1600
-     4 Achatinella buddii         EX       MOLLUSCA  GASTROPODA            1600
-     5 Achatinella caesia         EX       MOLLUSCA  GASTROPODA            1600
-     6 Achatinella casta          EX       MOLLUSCA  GASTROPODA            1600
-     7 Achatinella decora         EX       MOLLUSCA  GASTROPODA            1600
-     8 Achatinella dimorpha       EX       MOLLUSCA  GASTROPODA            1600
-     9 Achatinella elegans        EX       MOLLUSCA  GASTROPODA            1600
-    10 Achatinella juddii         EX       MOLLUSCA  GASTROPODA            1600
-    # ... with 979 more rows
+       scientific_name            category phylum     class          extinct_year
+       <chr>                      <chr>    <chr>      <chr>                 <dbl>
+     1 Mirogrex hulensis          EX       CHORDATA   ACTINOPTERYGII         2000
+     2 Acanthametropus pecatonica EX       ARTHROPODA INSECTA                1600
+     3 Achatinella abbreviata     EX       MOLLUSCA   GASTROPODA             1600
+     4 Achatinella buddii         EX       MOLLUSCA   GASTROPODA             1600
+     5 Achatinella caesia         EX       MOLLUSCA   GASTROPODA             1600
+     6 Achatinella casta          EX       MOLLUSCA   GASTROPODA             1600
+     7 Achatinella decora         EX       MOLLUSCA   GASTROPODA             1600
+     8 Achatinella dimorpha       EX       MOLLUSCA   GASTROPODA             1600
+     9 Achatinella elegans        EX       MOLLUSCA   GASTROPODA             1600
+    10 Achatinella juddii         EX       MOLLUSCA   GASTROPODA             1600
+    # … with 979 more rows
 
 To reproduce a similar result to Ceballos’s final graph, we did the
 following - We sorted the species with extinction dates into 4 different
@@ -404,7 +405,8 @@ master_ex_table
     19         2000 Other Vertebrates    82     147       33056          0.445
 
 Lets’ visualize these maximum possible extinction rates that we
-calculated by including NA dates in the year bin of 1600.
+calculated by including NA dates in the year bin of
+1600.
 
 ``` r
 master_ex_table %>% ggplot(aes(x = factor(extinct_year), group = group, color = group)) +
@@ -442,19 +444,19 @@ all_species_noNA
 ```
 
     # A tibble: 548 x 5
-       scientific_name               category phylum    class      extinct_year
-       <chr>                         <chr>    <chr>     <chr>             <int>
-     1 Mirogrex hulensis             EX       CHORDATA  ACTINOPTE~         2000
-     2 Acipenser nudiventris         EX       CHORDATA  ACTINOPTE~         2000
-     3 Afrocyclops pauliani          EX       ARTHROPO~ MAXILLOPO~         2000
-     4 Alasmidonta robusta           EX       MOLLUSCA  BIVALVIA           2000
-     5 Alasmidonta wrightiana        EX       MOLLUSCA  BIVALVIA           2000
-     6 Alasmidonta mccordi           EX       MOLLUSCA  BIVALVIA           2000
-     7 Alburnus akili                EX       CHORDATA  ACTINOPTE~         2000
-     8 Alcelaphus buselaphus ssp. b~ EX       CHORDATA  MAMMALIA           2000
-     9 Pholidoscelis cineraceus      EX       CHORDATA  REPTILIA           2000
-    10 Aphanius splendens            EX       CHORDATA  ACTINOPTE~         2000
-    # ... with 538 more rows
+       scientific_name                  category phylum     class       extinct_year
+       <chr>                            <chr>    <chr>      <chr>              <int>
+     1 Mirogrex hulensis                EX       CHORDATA   ACTINOPTER…         2000
+     2 Acipenser nudiventris            EX       CHORDATA   ACTINOPTER…         2000
+     3 Afrocyclops pauliani             EX       ARTHROPODA MAXILLOPODA         2000
+     4 Alasmidonta robusta              EX       MOLLUSCA   BIVALVIA            2000
+     5 Alasmidonta wrightiana           EX       MOLLUSCA   BIVALVIA            2000
+     6 Alasmidonta mccordi              EX       MOLLUSCA   BIVALVIA            2000
+     7 Alburnus akili                   EX       CHORDATA   ACTINOPTER…         2000
+     8 Alcelaphus buselaphus ssp. buse… EX       CHORDATA   MAMMALIA            2000
+     9 Pholidoscelis cineraceus         EX       CHORDATA   REPTILIA            2000
+    10 Aphanius splendens               EX       CHORDATA   ACTINOPTER…         2000
+    # … with 538 more rows
 
 Our table without the rows of NA values for extinct year now has only
 548 species. This number is only around 58% of all extinct species.
@@ -504,7 +506,12 @@ master_noNA <- all_types_noNa %>%
 master_ex_table <- master_ex_table %>%
   select(extinct_year, group, sum_species, perc_ex_withNA) %>%
   mutate(perc_ex_noNA = master_noNA$perc_extinct_noNA)
-  
+```
+
+    Warning in inds_combine(.vars, ind_list): '.Random.seed[1]' is not a valid
+    integer, so ignored
+
+``` r
 master_ex_table
 ```
 
@@ -534,12 +541,13 @@ master_ex_table
 ```
 
 Lets’ visualize the extinction percentages that we calculated excluding
-extinction records that had NA values for extinction dates.
+extinction records that had NA values for extinction
+dates.
 
 ``` r
 master_ex_table %>% ggplot(aes(x = factor(extinct_year), group = group, color = group)) +
-  geom_line(aes(y = perc_ex_withNA), lwd = 1.5) +
-  geom_line(aes(y = perc_ex_noNA), linetype = "dashed") +
+  geom_line(aes(y = perc_ex_withNA), lwd = 1.0) +
+  geom_line(aes(y = perc_ex_noNA), lwd = 1.0, linetype = "dashed") +
   labs(title = "Cumulative Vertebrate Species as EX or EW by the IUCN 2019",
        y = 'Cumulative extinctions as % of UCN-evaluated species',
        x = "Time interval") + 
@@ -655,28 +663,27 @@ master_ex_table
 ```
 
     # A tibble: 19 x 6
-       extinct_year group sum_species perc_ex_withNA perc_ex_noNA
-              <dbl> <chr>       <int>          <dbl>        <dbl>
-     1         1600 Birds       11126          0.171      0.0539 
-     2         1700 Birds       11126          0.306      0.189  
-     3         1800 Birds       11126          0.503      0.386  
-     4         1900 Birds       11126          0.890      0.773  
-     5         2000 Birds       11126          1.45       1.33   
-     6         1600 Mamm~        6237          0.417      0.0160 
-     7         1700 Mamm~        6237          0.465      0.0641 
-     8         1800 Mamm~        6237          0.497      0.0962 
-     9         1900 Mamm~        6237          0.722      0.321  
-    10         2000 Mamm~        6237          1.52       1.12   
-    11         1600 Vert~       24135          0.286      0.0290 
-    12         1700 Vert~       24135          0.360      0.104  
-    13         1800 Vert~       24135          0.460      0.203  
-    14         1900 Vert~       24135          0.696      0.439  
-    15         2000 Vert~       24135          1.20       0.945  
-    16         1600 Othe~       33056          0.182      0.00908
-    17         1800 Othe~       33056          0.191      0.0182 
-    18         1900 Othe~       33056          0.197      0.0242 
-    19         2000 Othe~       33056          0.445      0.272  
-    # ... with 1 more variable: perc_ex_uncertain <dbl>
+       extinct_year group   sum_species perc_ex_withNA perc_ex_noNA perc_ex_uncerta…
+              <dbl> <chr>         <int>          <dbl>        <dbl>            <dbl>
+     1         1600 Birds         11126          0.171      0.0539            0.0973
+     2         1700 Birds         11126          0.306      0.189             0.243 
+     3         1800 Birds         11126          0.503      0.386             0.357 
+     4         1900 Birds         11126          0.890      0.773             0.698 
+     5         2000 Birds         11126          1.45       1.33              1.01  
+     6         1600 Mammals        6237          0.417      0.0160            0.0289
+     7         1700 Mammals        6237          0.465      0.0641            0.0868
+     8         1800 Mammals        6237          0.497      0.0962            0.0579
+     9         1900 Mammals        6237          0.722      0.321             0.405 
+    10         2000 Mammals        6237          1.52       1.12              1.45  
+    11         1600 Verteb…       24135          0.286      0.0290            0.0523
+    12         1700 Verteb…       24135          0.360      0.104             0.135 
+    13         1800 Verteb…       24135          0.460      0.203             0.179 
+    14         1900 Verteb…       24135          0.696      0.439             0.426 
+    15         2000 Verteb…       24135          1.20       0.945             0.912 
+    16         1600 Other …       33056          0.182      0.00908           0.0164
+    17         1800 Other …       33056          0.191      0.0182            0.0164
+    18         1900 Other …       33056          0.197      0.0242            0.0109
+    19         2000 Other …       33056          0.445      0.272             0.448 
 
 Lets’ put these results on multiple graphs to observe the differences,
 we have delved deeper into the data and explored different permutations
@@ -711,13 +718,13 @@ different extinction rates.
 
 ``` r
 plot1 <- master_ex_table %>% filter(group == "Birds") %>%
-  ggplot(aes(x = extinct_year)) +
-  geom_line(aes(y = perc_ex_withNA), linetype = "dotdash", lwd=1.2, alpha =0.5, color = "navy") +
-  geom_line(aes(y = perc_ex_noNA), linetype = "dashed", lwd=1.2, alpha =0.7, color = "red") +
+  ggplot(aes(x = extinct_year), color = "blue") +
+  geom_line(aes(y = perc_ex_withNA), linetype = "dotdash", lwd=1.2, alpha =0.5) +
+  geom_line(aes(y = perc_ex_noNA), linetype = "dashed", lwd=1.2, alpha =0.7) +
   geom_line(aes(y = perc_ex_uncertain), linetype = "solid", lwd=1.7, alpha = 0.5) +
   labs(title = "Birds",
        y = 'Cumulative extinctions %',
-       x = "Time interval")
+       x = "Time interval") 
 
 plot2 <- master_ex_table %>% filter(group == "Mammals") %>%
   ggplot(aes(x = extinct_year)) +

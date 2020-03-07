@@ -327,8 +327,8 @@ master_ex_table
 Lets' visualize the extinction percentages that we calculated excluding extinction records that had NA values for extinction dates.
 ```{r}
 master_ex_table %>% ggplot(aes(x = factor(extinct_year), group = group, color = group)) +
-  geom_line(aes(y = perc_ex_withNA), lwd = 1.5) +
-  geom_line(aes(y = perc_ex_noNA), linetype = "dashed") +
+  geom_line(aes(y = perc_ex_withNA), lwd = 1.0) +
+  geom_line(aes(y = perc_ex_noNA), lwd = 1.0, linetype = "dashed") +
   labs(title = "Cumulative Vertebrate Species as EX or EW by the IUCN 2019",
        y = 'Cumulative extinctions as % of UCN-evaluated species',
        x = "Time interval") + 
@@ -398,13 +398,13 @@ Perhaps the dashed lines above are hard to decipher. The dotted dash lines repre
 Lets' look individual species group and their different extinction rates.
 ```{r}
 plot1 <- master_ex_table %>% filter(group == "Birds") %>%
-  ggplot(aes(x = extinct_year)) +
-  geom_line(aes(y = perc_ex_withNA), linetype = "dotdash", lwd=1.2, alpha =0.5, color = "navy") +
-  geom_line(aes(y = perc_ex_noNA), linetype = "dashed", lwd=1.2, alpha =0.7, color = "red") +
+  ggplot(aes(x = extinct_year), color = "blue") +
+  geom_line(aes(y = perc_ex_withNA), linetype = "dotdash", lwd=1.2, alpha =0.5) +
+  geom_line(aes(y = perc_ex_noNA), linetype = "dashed", lwd=1.2, alpha =0.7) +
   geom_line(aes(y = perc_ex_uncertain), linetype = "solid", lwd=1.7, alpha = 0.5) +
   labs(title = "Birds",
        y = 'Cumulative extinctions %',
-       x = "Time interval")
+       x = "Time interval") 
 
 plot2 <- master_ex_table %>% filter(group == "Mammals") %>%
   ggplot(aes(x = extinct_year)) +
